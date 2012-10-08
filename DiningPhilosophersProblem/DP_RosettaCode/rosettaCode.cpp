@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#define nullptr NULL
+
 #define pthread_mutex_t HANDLE
 #define PTHREAD_MUTEX_INITIALIZER CreateMutex(nullptr, FALSE, nullptr)
 #define pthread_t HANDLE
@@ -31,7 +33,7 @@ void print(int y, int x, char *fmt, ...)
 	va_list ap;
 	va_start(ap, fmt);
  
-	auto r=lock(screen);
+	lock(screen);
 	/*xy(y + 1, x), */vprintf(fmt, ap);
 	/*xy(N + 1, 1), */fflush(stdout);
 	unlock(screen);

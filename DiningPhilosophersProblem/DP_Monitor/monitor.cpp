@@ -1,16 +1,10 @@
-#include <Windows.h>
-#include <stdio.h>
-
-// http://rosettacode.org/wiki/Dining_philosophers
-// http://en.wikipedia.org/wiki/Dining_philosophers_problem
+#include "..\commonDefs.h"
 
 enum PhilosopherState
 {
 	Think,
 	Eat,
 };
-
-const int g_PhilosophersCount=5;
 
 HANDLE g_monitorMutex;
 
@@ -26,11 +20,38 @@ Philosopher g_Philosophers[g_PhilosophersCount];
 
 HANDLE g_PhilosophersThreads[g_PhilosophersCount];
 
+HANDLE viewMutex;
+CONSOLE_SCREEN_BUFFER_INFO info;
+HANDLE stdOutHandle;
+
+void stateView()
+{
+	WaitForSingleObject(viewMutex, INFINITE);
+
+	SetConsoleCursorPosition(stdOutHandle, info.dwCursorPosition);
+	for (int i=0; i<g_PhilosophersCount; i++)
+	{
+		char *_state;
+		Philosopher *_philosopher=&g_Philosophers[i];
+		switch(_philosopher->state)
+		{
+		case (PhilosopherState::Think):
+			_state="Th";
+			break;
+		case (PhilosopherState::Eat):
+			_state="Ea";
+			break;
+		}
+		printf("%d:%s(%d) ", _philosopher->id, _state, _philosopher->timesAte);
+	}
+	ReleaseMutex(viewMutex);
+}
+
 BOOL monitorAskMayEat(Philosopher *philosopher)
 {
 	WaitForSingleObject(g_monitorMutex, INFINITE);
 
-	auto _id=philosopher->id;
+	int _id=philosopher->id;
 	Philosopher* _left=&g_Philosophers[(_id-1<0)?g_PhilosophersCount-1:_id-1];
 	Philosopher* _right=&g_Philosophers[(_id+1)%g_PhilosophersCount];
 
@@ -55,8 +76,11 @@ void monitorSayFreeForks(Philosopher *philosopher)
 
 DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 {
-	auto _philosopher=static_cast<Philosopher *>(lpParameter);
-	printf("%d started\n", _philosopher->id);
+	Philosopher *_philosopher=static_cast<Philosopher *>(lpParameter);
+	//printf("%d started\n", _philosopher->id);
+#ifdef DIRECT_STATE_VIEW
+	stateView();
+#endif
 
 	while (true)
 	{
@@ -67,24 +91,48 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 
 		while (!monitorAskMayEat(_philosopher)) { Sleep(rand()%100); }
 
-		printf("%d eat\n", _philosopher->id);
+		//printf("%d eat\n", _philosopher->id);
 		_philosopher->timesAte++;
+#ifdef DIRECT_STATE_VIEW
+		stateView();
+#endif
 		Sleep(rand()%100);
 
 		monitorSayFreeForks(_philosopher);
 
-		printf("%d think\n", _philosopher->id);
+		//printf("%d think\n", _philosopher->id);
+#ifdef DIRECT_STATE_VIEW
+		stateView();
+#endif
 	}
 	return 0;
 }
 
+#ifndef DIRECT_STATE_VIEW
+DWORD WINAPI stateViewer(LPVOID)
+{
+	Sleep(200);
+	while (true)
+	{
+		stateView();
+		Sleep(50);
+	}
+}
+#endif
+
 int main()
 {
+	viewMutex=CreateMutex(nullptr, FALSE, nullptr);
+	stdOutHandle=GetStdHandle(STD_OUTPUT_HANDLE);
+	GetConsoleScreenBufferInfo((HANDLE)STD_OUTPUT_HANDLE, &info);
+
 	g_monitorMutex=CreateMutex(nullptr, FALSE, nullptr);
-	
+#ifndef DIRECT_STATE_VIEW
+	CreateThread(nullptr, 0, &stateViewer, nullptr, 0, nullptr);
+#endif
 	for (int i=0; i<g_PhilosophersCount; i++)
 	{
-		auto _philosopher=&g_Philosophers[i];
+		Philosopher *_philosopher=&g_Philosophers[i];
 		_philosopher->id=i;
 		g_PhilosophersThreads[i]=CreateThread(nullptr, 0, &philosopherRoutine, &g_Philosophers[i], 0, nullptr);
 	}

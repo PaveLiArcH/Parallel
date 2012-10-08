@@ -17,8 +17,8 @@ HANDLE g_Forks[g_PhilosophersCount];
 struct Philosopher
 {
 	int id;
-	int leftFork;
-	int rightFork;
+	HANDLE leftFork;
+	HANDLE rightFork;
 	PhilosopherState state;
 
 	long long timesAte;
@@ -81,59 +81,25 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 	stateView();
 #endif
 
-	HANDLE _forks[2];
-	PhilosopherState _states[6];
-	char *_strings[2];
-
-	if (_philosopher->leftFork<_philosopher->rightFork)
-	{
-		_forks[0]=g_Forks[_philosopher->leftFork];
-		_forks[1]=g_Forks[_philosopher->rightFork];
-		
-		_states[0]=PhilosopherState::WaitLeftFork;
-		_states[1]=PhilosopherState::HasLeftFork;
-		_states[2]=PhilosopherState::WaitRightFork;
-		_states[3]=PhilosopherState::HasRightFork;
-		_states[4]=PhilosopherState::UnlockLeftFork;
-		_states[5]=PhilosopherState::UnlockRightFork;
-
-		_strings[0]="left";
-		_strings[1]="right";
-	} else
-	{
-		_forks[0]=g_Forks[_philosopher->rightFork];
-		_forks[1]=g_Forks[_philosopher->leftFork];
-		
-		_states[0]=PhilosopherState::WaitRightFork;
-		_states[1]=PhilosopherState::HasRightFork;
-		_states[2]=PhilosopherState::WaitLeftFork;
-		_states[3]=PhilosopherState::HasLeftFork;
-		_states[4]=PhilosopherState::UnlockRightFork;
-		_states[5]=PhilosopherState::UnlockLeftFork;
-
-		_strings[0]="right";
-		_strings[1]="left";
-	}
-
 	while (true)
 	{
 		Sleep(rand()%100);
 		_philosopher->state=PhilosopherState::Think;
 
 		Sleep(rand()%100);
-		_philosopher->state=_states[0];
-		WaitForSingleObject(_forks[0], INFINITE);
-		_philosopher->state=_states[1];
-		//printf("%d has %s fork\n", _philosopher->id, _strings[0]);
+		_philosopher->state=PhilosopherState::WaitLeftFork;
+		WaitForSingleObject(_philosopher->leftFork, INFINITE);
+		_philosopher->state=PhilosopherState::HasLeftFork;
+		//printf("%d has left fork\n", _philosopher->id);
 #ifdef DIRECT_STATE_VIEW
 		stateView();
 #endif
 
 		Sleep(rand()%100);
-		_philosopher->state=_states[2];
-		WaitForSingleObject(_forks[1], INFINITE);
-		_philosopher->state=_states[3];
-		//printf("%d has %s fork\n", _philosopher->id, _strings[1]);
+		_philosopher->state=PhilosopherState::WaitRightFork;
+		WaitForSingleObject(_philosopher->rightFork, INFINITE);
+		_philosopher->state=PhilosopherState::HasRightFork;
+		//printf("%d has right fork\n", _philosopher->id);
 #ifdef DIRECT_STATE_VIEW
 		stateView();
 #endif
@@ -146,11 +112,11 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 #endif
 		Sleep(rand()%100);
 
-		_philosopher->state=_states[4];
-		ReleaseMutex(_forks[1]);
+		_philosopher->state=PhilosopherState::UnlockLeftFork;
+		ReleaseMutex(_philosopher->leftFork);
 
-		_philosopher->state=_states[5];
-		ReleaseMutex(_forks[0]);
+		_philosopher->state=PhilosopherState::UnlockRightFork;
+		ReleaseMutex(_philosopher->rightFork);
 
 		//printf("%d think\n", _philosopher->id);
 #ifdef DIRECT_STATE_VIEW
@@ -189,8 +155,8 @@ int main()
 	{
 		Philosopher *_philosopher=&g_Philosophers[i];
 		_philosopher->id=i;
-		_philosopher->leftFork=i;
-		_philosopher->rightFork=(i+1)%g_PhilosophersCount;
+		_philosopher->leftFork=g_Forks[i];
+		_philosopher->rightFork=g_Forks[(i+1)%g_PhilosophersCount];
 		g_PhilosophersThreads[i]=CreateThread(nullptr, 0, &philosopherRoutine, &g_Philosophers[i], 0, nullptr);
 	}
 	WaitForMultipleObjects(g_PhilosophersCount, g_PhilosophersThreads, TRUE, INFINITE);
