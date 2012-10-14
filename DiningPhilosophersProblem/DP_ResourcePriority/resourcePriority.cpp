@@ -1,37 +1,56 @@
+﻿////////////////////////////////////////////////////////////////////////////////
+/// Разрешение проблемы обедающих философов путем присвоения приоритета ресурсам
+///
+///	Основная идея подхода:
+///  Каждая рабочая единица всегда берёт сначала вилку с наименьшим номером, 
+///   а потом вилку с наибольшим номером из двух доступных. 
+///   Далее освобождается сначала вилка с бо́льшим номером, потом — с меньшим.
+///
+/// Такой подход гарантирует, что не возникнет ситуация, когда по одной вилке 
+///  будет у каждого из философов - что позволит есть как минимум 
+///  одному из философов.
+////////////////////////////////////////////////////////////////////////////////
+
 #include "..\commonDefs.h"
 
+// набор состояний философов
 enum PhilosopherState
 {
-	Think,
-	WaitLeftFork,
-	HasLeftFork,
-	WaitRightFork,
-	HasRightFork,
-	Eat,
-	UnlockLeftFork,
-	UnlockRightFork,
+	Think,				// размышление
+	WaitLeftFork,		// ожидание левой вилки
+	HasLeftFork,		// наличие левой вилки
+	WaitRightFork,		// ожидание правой вилки
+	HasRightFork,		// наличие правой вилки
+	Eat,				// прием пищи
+	UnlockLeftFork,		// освобождение левой вилки
+	UnlockRightFork,	// освобождение правой вилки
 };
 
+// набор мьютексов-вилок
 HANDLE g_Forks[g_PhilosophersCount];
 
+// структура, хранящая информацию о философе
 struct Philosopher
 {
-	int id;
-	int leftFork;
-	int rightFork;
-	PhilosopherState state;
+	int id;					// порядковый номер
+	int leftFork;			// номер левой вилки
+	int rightFork;			// номер правой вилки
+	PhilosopherState state;	// состояние
 
-	long long timesAte;
+	long long timesAte;		// количество успешных приемов пищи
 };
 
+// набор философов
 Philosopher g_Philosophers[g_PhilosophersCount];
 
+// набор потоков, моделирующих действия соответствующих философов
 HANDLE g_PhilosophersThreads[g_PhilosophersCount];
 
 HANDLE viewMutex;
 CONSOLE_SCREEN_BUFFER_INFO info;
 HANDLE stdOutHandle;
 
+// метод для отображения текущего состояния
 void stateView()
 {
 	WaitForSingleObject(viewMutex, INFINITE);
@@ -73,6 +92,7 @@ void stateView()
 	ReleaseMutex(viewMutex);
 }
 
+// метод, моделирующий действия философа
 DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 {
 	Philosopher *_philosopher=static_cast<Philosopher *>(lpParameter);
@@ -115,12 +135,12 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 		_strings[1]="left";
 	}
 
-	while (true)
+	while (!g_isTimeout)
 	{
-		Sleep(rand()%100);
+		Sleep(DELAY_STATE_CHANGE);
 		_philosopher->state=PhilosopherState::Think;
 
-		Sleep(rand()%100);
+		Sleep(DELAY_THINK);
 		_philosopher->state=_states[0];
 		WaitForSingleObject(_forks[0], INFINITE);
 		_philosopher->state=_states[1];
@@ -129,7 +149,7 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 		stateView();
 #endif
 
-		Sleep(rand()%100);
+		Sleep(DELAY_STATE_CHANGE);
 		_philosopher->state=_states[2];
 		WaitForSingleObject(_forks[1], INFINITE);
 		_philosopher->state=_states[3];
@@ -144,7 +164,7 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 #ifdef DIRECT_STATE_VIEW
 		stateView();
 #endif
-		Sleep(rand()%100);
+		Sleep(DELAY_EAT);
 
 		_philosopher->state=_states[4];
 		ReleaseMutex(_forks[1]);
@@ -163,21 +183,25 @@ DWORD WINAPI philosopherRoutine(LPVOID lpParameter)
 #ifndef DIRECT_STATE_VIEW
 DWORD WINAPI stateViewer(LPVOID)
 {
-	Sleep(200);
-	while (true)
+	Sleep(DELAY_VIEW_INIT);
+	while (!g_isTimeout)
 	{
 		stateView();
-		Sleep(50);
+		Sleep(DELAY_VIEW_UPDATE);
 	}
+	return 0;
 }
 #endif
 
 int main()
 {
+	g_isTimeout=false;
+
 	viewMutex=CreateMutex(nullptr, FALSE, nullptr);
 	stdOutHandle=GetStdHandle(STD_OUTPUT_HANDLE);
 	GetConsoleScreenBufferInfo((HANDLE)STD_OUTPUT_HANDLE, &info);
 
+	// создаем мьютексы для вилок
 	for (int i=0; i<g_PhilosophersCount; i++)
 	{
 		g_Forks[i]=CreateMutex(nullptr, FALSE, nullptr);
@@ -185,6 +209,7 @@ int main()
 #ifndef DIRECT_STATE_VIEW
 	CreateThread(nullptr, 0, &stateViewer, nullptr, 0, nullptr);
 #endif
+	// инициализируем структуры с информацией о философах и запускаем потоки моделирования их действий
 	for (int i=0; i<g_PhilosophersCount; i++)
 	{
 		Philosopher *_philosopher=&g_Philosophers[i];
@@ -193,5 +218,11 @@ int main()
 		_philosopher->rightFork=(i+1)%g_PhilosophersCount;
 		g_PhilosophersThreads[i]=CreateThread(nullptr, 0, &philosopherRoutine, &g_Philosophers[i], 0, nullptr);
 	}
+
+	Sleep(DELAY_TOTAL); // ждем заданное время
+	g_isTimeout=true; // устанавливаем флаг необходимости завершения потоков
+
 	WaitForMultipleObjects(g_PhilosophersCount, g_PhilosophersThreads, TRUE, INFINITE);
+
+	stateView(); // выводим окончательные результаты
 }
