@@ -5,6 +5,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "matrix_classic", "matrix_cl
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "matrix_openmp", "matrix_openmp\matrix_openmp.vcxproj", "{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell_sort_classic", "shell_sort_classic\shell_sort_classic.vcxproj", "{6DB1ABF8-FCE3-433D-96AE-61D9D3FA684C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell_sort_openmp", "shell_sort_openmp\shell_sort_openmp.vcxproj", "{4CE54BF3-36F6-4894-8216-73200C75CF09}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -19,6 +23,14 @@ Global
 		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Debug|Win32.Build.0 = Debug|Win32
 		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Release|Win32.ActiveCfg = Release|Win32
 		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Release|Win32.Build.0 = Release|Win32
+		{6DB1ABF8-FCE3-433D-96AE-61D9D3FA684C}.Debug|Win32.ActiveCfg = Debug|Win32
+		{6DB1ABF8-FCE3-433D-96AE-61D9D3FA684C}.Debug|Win32.Build.0 = Debug|Win32
+		{6DB1ABF8-FCE3-433D-96AE-61D9D3FA684C}.Release|Win32.ActiveCfg = Release|Win32
+		{6DB1ABF8-FCE3-433D-96AE-61D9D3FA684C}.Release|Win32.Build.0 = Release|Win32
+		{4CE54BF3-36F6-4894-8216-73200C75CF09}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4CE54BF3-36F6-4894-8216-73200C75CF09}.Debug|Win32.Build.0 = Debug|Win32
+		{4CE54BF3-36F6-4894-8216-73200C75CF09}.Release|Win32.ActiveCfg = Release|Win32
+		{4CE54BF3-36F6-4894-8216-73200C75CF09}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

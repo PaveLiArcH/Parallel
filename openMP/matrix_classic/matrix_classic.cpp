@@ -8,8 +8,7 @@
 using std::cout;
 using std::endl;
 
-const int N=2048;
-const int N2=N*N;
+const int N=256;
 
 const int g_LIMIT_VALUE=100;
 
@@ -19,7 +18,7 @@ int main()
 {
 	LARGE_INTEGER _start, _end;
 	QueryPerformanceCounter(&_start);
-	
+
 	for(int i=0; i<N; i++)
 	{
 		for (int j=0; j<N; j++)
@@ -31,7 +30,7 @@ int main()
 
 	QueryPerformanceCounter(&_end);
 	auto _result=_end.QuadPart-_start.QuadPart;
-	
+
 	cout<<"Generation time: "<<_result<<endl;
 
 	QueryPerformanceCounter(&_start);
