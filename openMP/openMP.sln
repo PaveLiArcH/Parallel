@@ -1,7 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual C++ Express 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "openMP", "openMP\openMP.vcxproj", "{1725FE64-F4AD-43F0-B3F6-4884BB94D90A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "matrix_classic", "matrix_classic\matrix_classic.vcxproj", "{4B1F6C9B-1F02-4BAE-93FF-2227939404F1}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "matrix_openmp", "matrix_openmp\matrix_openmp.vcxproj", "{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -9,10 +11,14 @@ Global
 		Release|Win32 = Release|Win32
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1725FE64-F4AD-43F0-B3F6-4884BB94D90A}.Debug|Win32.ActiveCfg = Debug|Win32
-		{1725FE64-F4AD-43F0-B3F6-4884BB94D90A}.Debug|Win32.Build.0 = Debug|Win32
-		{1725FE64-F4AD-43F0-B3F6-4884BB94D90A}.Release|Win32.ActiveCfg = Release|Win32
-		{1725FE64-F4AD-43F0-B3F6-4884BB94D90A}.Release|Win32.Build.0 = Release|Win32
+		{4B1F6C9B-1F02-4BAE-93FF-2227939404F1}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4B1F6C9B-1F02-4BAE-93FF-2227939404F1}.Debug|Win32.Build.0 = Debug|Win32
+		{4B1F6C9B-1F02-4BAE-93FF-2227939404F1}.Release|Win32.ActiveCfg = Release|Win32
+		{4B1F6C9B-1F02-4BAE-93FF-2227939404F1}.Release|Win32.Build.0 = Release|Win32
+		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Debug|Win32.Build.0 = Debug|Win32
+		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Release|Win32.ActiveCfg = Release|Win32
+		{2C8A6A5E-8877-4F56-BD2A-DD14977C4E5B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

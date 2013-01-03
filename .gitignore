@@ -1,5 +1,9 @@
+﻿
 *.sdf
+*.opensdf
 *.suo
-Debug
 *.user
 *.ipch
+Debug
+Release
+/Параллельное программирование
