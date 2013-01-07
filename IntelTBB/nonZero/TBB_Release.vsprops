@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="windows-1251"?>
+<VisualStudioPropertySheet
+	ProjectType="Visual C++"
+	Version="8.00"
+	Name="TBB_Release_Win32"
+	>
+	<Tool
+		Name="VCCLCompilerTool"
+		RuntimeLibrary="3"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		AdditionalDependencies="tbb.lib"
+		AdditionalLibraryDirectories="$(TBBROOT)\lib\ia32\vc_mt;$(TBBROOT)\lib\ia32\vc9"
+	/>
+</VisualStudioPropertySheet>
