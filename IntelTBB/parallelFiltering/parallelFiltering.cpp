@@ -1,8 +1,3 @@
-//#include <climits>
-//#include <cstdlib>
-//#include <iostream>
-//#include <vector>
-//
 #include "tbb/pipeline.h"
 #include "tbb/task_scheduler_init.h"
 #include "tbb/blocked_range.h"
@@ -53,7 +48,9 @@ private:
 		Mat* _retMat=new Mat();
 		if (isVideo)
 		{
-			*capture>>*_retMat;
+			*capture>>frame;
+			*_retMat=frame;
+			imshow("Original Image", frame);
 			return _retMat;
 		} else
 		{
@@ -116,11 +113,16 @@ int main( int argc, char** argv )
 	/// Create Windows
 	namedWindow("Original Image", 1);
 	namedWindow("New Image", 1);
-	//namedWindow("New Image #2", 1);
 
 	/// Read image given by user
 	//Mat image = imread( argv[1] );
 	Mat image = imread( "touhou-Touhou-Project-anime-Hakurei-Reimu.33p.jpg" );
+
+	//VideoCapture cap(0);
+    VideoCapture cap("D:\\Cool\\Diablo ролики\\Demon_Hunter_RURU.mpg"); // open the default camera
+	//VideoCapture cap("E:\\Films\\Tengen Toppa Gurren-Lagann\\ТОМ 3 [tapochek.net]\\DVD 7 [tapochek.net]\\VIDEO_TS\\VTS_01_1.VOB");
+    if(!cap.isOpened())  // check if we succeeded
+        return -1;
 
 	imshow("Original Image", image);
 
@@ -143,45 +145,7 @@ int main( int argc, char** argv )
 
 	pipeline.run( 4 );
 
-	/*/// Do the operation new_image(i,j) = 255 - image(i,j)
-	new_image=negative(image);
-
-	/// Do the operation new_image(i,j) = alpha*image(i,j) + beta
-	new_image2=edgeDetection(image);
-
-	
-
-	/// Show stuff
-	imshow("Original Image", image);
-	imshow("New Image", new_image);
-	imshow("New Image #2", new_image2);
-	imwrite("negative.jpg", new_image);
-	imwrite("edges.jpg", new_image2);*/
-
 	/// Wait until user press some key
 	waitKey();
 	return 0;
 }
-
-//int main( int argc, char** argv )
-//{
-//	//VideoCapture cap(0);
-//    VideoCapture cap("D:\\Cool\\Diablo ролики\\Demon_Hunter_RURU.mpg"); // open the default camera
-//	//VideoCapture cap("E:\\Films\\Tengen Toppa Gurren-Lagann\\ТОМ 3 [tapochek.net]\\DVD 7 [tapochek.net]\\VIDEO_TS\\VTS_01_1.VOB");
-//    if(!cap.isOpened())  // check if we succeeded
-//        return -1;
-//
-//    Mat edges;
-//    namedWindow("edges",1);
-//    for(;;)
-//    {
-//        Mat frame;
-//        cap >> frame; // get a new frame from camera
-//		
-//        edges=negative(frame);
-//        imshow("edges", edges);
-//        if(waitKey(1) >= 0) break;
-//    }
-//    // the camera will be deinitialized automatically in VideoCapture destructor
-//    return 0;
-//}
