@@ -3,10 +3,11 @@
 //#include <iostream>
 //#include <vector>
 //
-//#include "tbb/task_scheduler_init.h"
-//#include "tbb/blocked_range.h"
-//#include "tbb/parallel_reduce.h"
-//#include "tbb/tick_count.h"
+#include "tbb/pipeline.h"
+#include "tbb/task_scheduler_init.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_reduce.h"
+#include "tbb/tick_count.h"
 //
 //using namespace std;
 //using namespace tbb;
@@ -30,105 +31,135 @@
 
 using namespace cv;
 
-double alpha; /**< Simple contrast control */
-int beta;  /**< Simple brightness control */
-
-Mat negative(Mat a_source)
+void negative(Mat a_source)
 {
-	Mat _retImage = Mat::zeros( a_source.size(), a_source.type() );
+	Vec3b _full(255,255,255);
 	int _rows=a_source.rows, _cols=a_source.cols, _channels=a_source.channels();
 	for( int y = 0; y < _rows; y++ )
 	{
 		for( int x = 0; x < _cols; x++ )
 		{
-			for( int c = 0; c < _channels; c++ )
+			a_source.at<Vec3b>(y,x)=_full-a_source.at<Vec3b>(y,x);
+			/*for( int c = 0; c < _channels; c++ )
 			{
-				_retImage.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( 255-a_source.at<Vec3b>(y,x)[c] );
-			}
+				a_source.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( 255-a_source.at<Vec3b>(y,x)[c] );
+			}*/
 		}
 	}
-	return _retImage;
-}
-
-inline uchar getPixel(Mat image, int c, int y, int x, int rows, int cols)
-{
-	return (y>=0)&&(y<rows)&&(x>=0)&&(x<cols)?image.at<Vec3b>(y, x)[c]:0;
 }
 
 Mat edgeDetection(Mat a_source)
 {
+	Mat _gx = (Mat_<double>(3,3) << -1, 0, 1, -1, 0, 1, -1, 0, 1);
 	Mat _retImage = Mat::zeros( a_source.size(), a_source.type() );
-	int _rows=a_source.rows, _cols=a_source.cols, _channels=a_source.channels();
-	for( int y = 0; y < _rows; y++ )
-	{
-		for( int x = 0; x < _cols; x++ )
-		{
-
-			for( int c = 0; c < _channels; c++ )
-			{
-				/// Prewitt
-				double _gx=-getPixel(a_source, c, y-1, x-1, _rows, _cols)-getPixel(a_source, c, y, x-1, _rows, _cols)-getPixel(a_source, c, y+1, x-1, _rows, _cols);
-				_gx+=getPixel(a_source, c, y-1, x+1, _rows, _cols)+getPixel(a_source, c, y, x+1, _rows, _cols)+getPixel(a_source, c, y+1, x+1, _rows, _cols);
-
-				double _gy=-getPixel(a_source, c, y-1, x-1, _rows, _cols)-getPixel(a_source, c, y-1, x, _rows, _cols)-getPixel(a_source, c, y-1, x+1, _rows, _cols);
-				_gy+=getPixel(a_source, c, y+1, x-1, _rows, _cols)+getPixel(a_source, c, y+1, x, _rows, _cols)+getPixel(a_source, c, y+1, x+1, _rows, _cols);
-
-				/// Sobel
-				/*double _gx=-getPixel(a_source, c, y-1, x-1, _rows, _cols)-2*getPixel(a_source, c, y, x-1, _rows, _cols)-getPixel(a_source, c, y+1, x-1, _rows, _cols);
-				_gx+=getPixel(a_source, c, y-1, x+1, _rows, _cols)+2*getPixel(a_source, c, y, x+1, _rows, _cols)+getPixel(a_source, c, y+1, x+1, _rows, _cols);
-
-				double _gy=-getPixel(a_source, c, y-1, x-1, _rows, _cols)-2*getPixel(a_source, c, y-1, x, _rows, _cols)-getPixel(a_source, c, y-1, x+1, _rows, _cols);
-				_gy+=getPixel(a_source, c, y+1, x-1, _rows, _cols)+2*getPixel(a_source, c, y+1, x, _rows, _cols)+getPixel(a_source, c, y+1, x+1, _rows, _cols);*/
-
-				/// Scharr
-				/*double _gx=-3*getPixel(a_source, c, y-1, x-1, _rows, _cols)-10*getPixel(a_source, c, y, x-1, _rows, _cols)-3*getPixel(a_source, c, y+1, x-1, _rows, _cols);
-				_gx+=3*getPixel(a_source, c, y-1, x+1, _rows, _cols)+10*getPixel(a_source, c, y, x+1, _rows, _cols)+3*getPixel(a_source, c, y+1, x+1, _rows, _cols);
-
-				double _gy=-3*getPixel(a_source, c, y-1, x-1, _rows, _cols)-10*getPixel(a_source, c, y-1, x, _rows, _cols)-3*getPixel(a_source, c, y-1, x+1, _rows, _cols);
-				_gy+=3*getPixel(a_source, c, y+1, x-1, _rows, _cols)+10*getPixel(a_source, c, y+1, x, _rows, _cols)+3*getPixel(a_source, c, y+1, x+1, _rows, _cols);*/
-
-				_retImage.at<Vec3b>(y,x)[c] = saturate_cast<uchar>( sqrt(_gx*_gx+_gy*_gy));
-			}
-		}
-	}
+	filter2D(a_source, _retImage, -1, _gx);	
 	return _retImage;
 }
 
-//Mat edgeDetection(Mat a_source)
+//class ImageInputFilter: public tbb::filter
 //{
-//	Mat _dxM(3, 3, CV_32SC3, Scalar(1, 1, 1, 1));
-//	_dxM.col(0).setTo(_dxM.col(0)*-1);
-//	_dxM.col(1).setTo(_dxM.col(1)*0);
+//public:
+//	ImageInputFilter( VideoCapture* a_capture ) : filter(serial_in_order), capture(a_capture), isVideo(true) {}
+//    ~MyInputFilter();
+//private:
+//    VideoCapture* capture;
+//    bool isVideo;
+//    /*override*/ void* operator()(void*);
+//};
 //
-//	Mat _dyM(3, 3, CV_32SC3, Scalar(1, 1, 1, 1));
-//	_dyM.row(0).setTo(_dxM.row(0)*-1);
-//	_dyM.row(1).setTo(_dxM.row(1)*0);
+//MyInputFilter::MyInputFilter( FILE* input_file_ ) : 
+//    filter(serial_in_order),
+//    input_file(input_file_),
+//    next_slice( TextSlice::allocate( MAX_CHAR_PER_INPUT_SLICE ) )
+//{ 
+//}
 //
-//	Mat _retImage = Mat::zeros( a_source.size(), a_source.type() );
-//	int _rows=a_source.rows+1, _cols=a_source.cols+1, _channels=a_source.channels();
+//MyInputFilter::~MyInputFilter() {
+//    next_slice->free();
+//}
+// 
+//void* MyInputFilter::operator()(void*) {
+//    // Read characters into space that is available in the next slice.
+//    size_t m = next_slice->avail();
+//    size_t n = fread( next_slice->end(), 1, m, input_file );
+//    if( !n && next_slice->size()==0 ) {
+//        // No more characters to process
+//        return NULL;
+//    } else {
+//        // Have more characters to process.
+//        TextSlice& t = *next_slice;
+//        next_slice = TextSlice::allocate( MAX_CHAR_PER_INPUT_SLICE );
+//        char* p = t.end()+n;
+//        if( n==m ) {
+//            // Might have read partial number.  If so, transfer characters of partial number to next slice.
+//            while( p>t.begin() && isdigit(p[-1]) ) 
+//                --p;
+//            next_slice->append( p, t.end()+n );
+//        }
+//        t.set_end(p);
+//        return &t;
+//    }
+//}
+//    
+////! Filter that changes each decimal number to its square.
+//class MyTransformFilter: public tbb::filter {
+//public:
+//    MyTransformFilter();
+//    /*override*/void* operator()( void* item );
+//};
 //
-//	Mat _expandedImage= Mat::zeros ( Size(_cols+1, _rows+1), CV_32SC3 );
+//MyTransformFilter::MyTransformFilter() : 
+//    tbb::filter(parallel) 
+//{}  
 //
-//	Mat _part=_expandedImage(Range(1, _rows), Range(1, _cols));
-//	//_part.setTo(a_source);
-//	a_source.convertTo(_part, CV_32SC3);
+///*override*/void* MyTransformFilter::operator()( void* item ) {
+//    TextSlice& input = *static_cast<TextSlice*>(item);
+//    // Add terminating null so that strtol works right even if number is at end of the input.
+//    *input.end() = '\0';
+//    char* p = input.begin();
+//    TextSlice& out = *TextSlice::allocate( 2*MAX_CHAR_PER_INPUT_SLICE );
+//    char* q = out.begin();
+//    for(;;) {
+//        while( p<input.end() && !isdigit(*p) ) 
+//            *q++ = *p++; 
+//        if( p==input.end() ) 
+//            break;
+//        long x = strtol( p, &p, 10 );
+//        // Note: no overflow checking is needed here, as we have twice the 
+//        // input string length, but the square of a non-negative integer n 
+//        // cannot have more than twice as many digits as n.
+//        long y = x*x; 
+//        sprintf(q,"%ld",y);
+//        q = strchr(q,0);
+//    }
+//    out.set_end(q);
+//    input.free();
+//    return &out;
+//}
+//         
+////! Filter that writes each buffer to a file.
+//class MyOutputFilter: public tbb::filter {
+//    FILE* my_output_file;
+//public:
+//    MyOutputFilter( FILE* output_file );
+//    /*override*/void* operator()( void* item );
+//};
 //
-//	for( int y = 1; y < _rows; y++ )
-//	{
-//		for( int x = 1; x < _cols; x++ )
-//		{
-//			Mat _temp=_expandedImage(Range(y-1, y+2), Range(x-1, x+2));
-//			auto _gx=sum(_temp.mul(_dxM));
-//			auto _gy=sum(_temp.mul(_dyM));
-//			for( int c = 0; c < _channels; c++ )
-//			{
-//				_retImage.at<Vec3b>(y-1,x-1)[c]=saturate_cast<uchar>( sqrt(_gx[c]*_gx[c]+_gy[c]*_gy[c]));
-//			}
-//		}
-//	}
-//	Mat _convertedImage;
-//	_retImage.convertTo(_convertedImage, CV_8UC3);
-//	return _convertedImage;
+//MyOutputFilter::MyOutputFilter( FILE* output_file ) : 
+//    tbb::filter(serial_in_order),
+//    my_output_file(output_file)
+//{
+//}
+//
+//void* MyOutputFilter::operator()( void* item ) {
+//    TextSlice& out = *static_cast<TextSlice*>(item);
+//    size_t n = fwrite( out.begin(), 1, out.size(), my_output_file );
+//    if( n!=out.size() ) {
+//        fprintf(stderr,"Can't write into file '%s'\n", OutputFileName.c_str());
+//        exit(1);
+//    }
+//    out.free();
+//    return NULL;
 //}
 
 //int main( int argc, char** argv )
