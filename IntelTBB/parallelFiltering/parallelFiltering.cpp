@@ -12,6 +12,9 @@
 
 using namespace cv;
 
+const int numTokens=4;
+const bool g_isShow=true;
+
 Mat* negative(Mat* a_source)
 {
 	Mat* _retImage=new Mat();
@@ -37,25 +40,47 @@ Mat* edgeDetection(Mat* a_source)
 class ImageInputFilter: public tbb::filter
 {
 public:
-	ImageInputFilter( VideoCapture* a_capture ) : filter(serial_in_order), capture(a_capture), isVideo(true) {}
-	ImageInputFilter( Mat* a_image ) : filter(serial_in_order), frame(*a_image), isVideo(false) {}
+	ImageInputFilter( VideoCapture* a_capture, bool a_show ) : filter(serial_in_order), capture(a_capture), isVideo(true), isShow(a_show) {}
+	ImageInputFilter( Mat* a_image, bool a_show ) : filter(serial_in_order), frame(a_image), isVideo(false), isShow(a_show) {}
 private:
     VideoCapture* capture;
-	Mat frame;
-    bool isVideo;
+	Mat* frame;
+    bool isVideo, isShow;
     /*override*/ void* operator()(void*)
 	{
-		Mat* _retMat=new Mat();
 		if (isVideo)
 		{
-			*capture>>frame;
-			*_retMat=frame;
-			imshow("Original Image", frame);
-			return _retMat;
+			Mat* _retMat=new Mat();
+			if (!capture->grab())
+			{
+				delete _retMat;
+				return NULL;
+			} else
+			{
+				capture->retrieve(*_retMat);
+				frame=_retMat;
+				if (isShow && frame)
+				{
+					imshow("Source", *frame);
+				}
+				return _retMat;
+			}
 		} else
 		{
-			*_retMat=frame;
-			return _retMat;
+			if (frame)
+			{
+				Mat* _retMat=new Mat(*frame);
+				//_retMat=frame;
+				if (isShow)
+				{
+					imshow("Source", *frame);
+				}
+				frame=NULL;
+				return _retMat;
+			} else
+			{
+				return NULL;
+			}
 		}
 	}
 };
@@ -93,14 +118,21 @@ class ImageOutputFilter: public tbb::filter
 {
 public:
 	std::string target;
+	bool isShow;
 
-	ImageOutputFilter(std::string a_target) : tbb::filter(serial_in_order), target(a_target) {};
+	ImageOutputFilter(std::string a_target, bool a_show) : tbb::filter(serial_in_order), target(a_target), isShow(a_show) {};
     /*override*/void* operator()( void* item )
 	{
 		Mat* input = static_cast<Mat*>(item);
-		imshow(target, *input);
+		if (isShow)
+		{
+			imshow(target, *input);
+		}
 		delete input;
-		waitKey(1);
+		if (isShow)
+		{
+			waitKey(1);
+		}
 		return NULL;
 	}
 };
@@ -111,27 +143,27 @@ int main( int argc, char** argv )
 	tbb::task_scheduler_init init;
 
 	/// Create Windows
-	namedWindow("Original Image", 1);
-	namedWindow("New Image", 1);
+	if (g_isShow)
+	{
+		namedWindow("Source", 1);
+		namedWindow("New Image", 1);
+	}
 
 	/// Read image given by user
 	//Mat image = imread( argv[1] );
 	Mat image = imread( "touhou-Touhou-Project-anime-Hakurei-Reimu.33p.jpg" );
 
 	//VideoCapture cap(0);
-    VideoCapture cap("D:\\Cool\\Diablo ролики\\Demon_Hunter_RURU.mpg"); // open the default camera
-	//VideoCapture cap("E:\\Films\\Tengen Toppa Gurren-Lagann\\ТОМ 3 [tapochek.net]\\DVD 7 [tapochek.net]\\VIDEO_TS\\VTS_01_1.VOB");
+	VideoCapture cap("D:\\Docs\\Visual Studio 2010\\Projects\\Parallel\\Red Bull Stratos  Jump (1080p).mp4");
     if(!cap.isOpened())  // check if we succeeded
         return -1;
-
-	imshow("Original Image", image);
-
+	
 	Mat new_image, new_image2;
 
-	ImageInputFilter _inFilter(&image);
+	ImageInputFilter _inFilter(&cap, g_isShow);
 	NegativeFilter _negativeFilter;
 	EdgeDetectionFilter _edgeFilter;
-	ImageOutputFilter _outFilter("New Image");
+	ImageOutputFilter _outFilter("New Image", g_isShow);
 	// Create filters sequence when parallel_pipeline() is being run
     //tbb::parallel_pipeline( 8, _inFilter & _negativeFilter & _outFilter );
 
@@ -139,11 +171,15 @@ int main( int argc, char** argv )
     tbb::pipeline pipeline;
 
     pipeline.add_filter( _inFilter );
-    pipeline.add_filter( _negativeFilter );
 	pipeline.add_filter( _edgeFilter );
+	pipeline.add_filter( _negativeFilter );
     pipeline.add_filter( _outFilter );
 
-	pipeline.run( 4 );
+	tbb::tick_count t0 = tbb::tick_count::now();
+	pipeline.run( 8 );
+	tbb::tick_count t1 = tbb::tick_count::now();
+
+	std::cout << "Time for action =" << (t1-t0).seconds() << " seconds. Tokens: " << numTokens << std::endl;
 
 	/// Wait until user press some key
 	waitKey();

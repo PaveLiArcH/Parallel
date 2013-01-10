@@ -140,6 +140,7 @@ DWORD WINAPI stateViewer(LPVOID)
 		stateView();
 		Sleep(DELAY_VIEW_UPDATE);
 	}
+	return 0;
 }
 #endif
 
