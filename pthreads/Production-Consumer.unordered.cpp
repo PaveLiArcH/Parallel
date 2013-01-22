@@ -33,8 +33,8 @@
 //using std::ofstream;
 using namespace std;
 
-const int		PRODUCER_COUNT			= 4;	// количество производителей
-const int		CONSUMER_COUNT			= 12;	// количество потребителей
+const int		PRODUCER_COUNT			= 2;	// количество производителей
+const int		CONSUMER_COUNT			= 4;	// количество потребителей
 
 const int		BUFFER_SIZE				= 8;	// размер циклического буфера
 const int		PRODUCER_SLEEP_TIME_MS	= 250;	// максимальная пауза между циклами производства
@@ -68,6 +68,8 @@ pthread_mutex_t		nums_mutex = PTHREAD_MUTEX_INITIALIZER;	// мьютекс дл�
 
 // обеспечение вывода в файл
 pthread_mutex_t		ofstream_mutex = PTHREAD_MUTEX_INITIALIZER;	// мьютекс для вывода в ofstream
+
+static ofstream _ofile("output");
 
 #ifndef PTHREAD_WIN32
 ////////////////////////////////////////////////////////////////////////////////
@@ -120,10 +122,9 @@ int num_sequence()
 ////////////////////////////////////////////////////////////////////////////////
 void ofile_data(int data)
 {
-	static ofstream _ofile("output");
-	pthread_mutex_lock(&nums_mutex);
+	pthread_mutex_lock(&ofstream_mutex);
 	_ofile<<data<<" ";
-	pthread_mutex_unlock(&nums_mutex);
+	pthread_mutex_unlock(&ofstream_mutex);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -171,7 +172,8 @@ void * producer(void *num)
 	printf ("Producer %d start\n", _id);
 	_ofile<<"Producer "<<_id<<" started at "<<_start<<endl;
 	_ofile<<"====="<<endl;
-	_ofile<<"wait started "<<getTime()-_start<<endl;
+	_ofile<<"state\tstart\tend\titem"<<endl;
+	_ofile<<"wait\t"<<getTime()-_start<<"\t";
 
 	bool isExiting=false;
 	// Цикл производства
@@ -202,20 +204,19 @@ void * producer(void *num)
 			}
 
 			printf ("Producer %d is waiting (queue is full)\n", _id);
-			_ofile<<"queue is full at "<<getTime()-_start<<endl;
+			//_ofile<<"queue is full at "<<getTime()-_start<<endl;
 			pthread_cond_wait(&queue_not_full_cond, &queue_mutex);
 		}
 		
-		_ofile<<"wait ended "<<getTime()-_start<<endl;
+		_ofile<<getTime()-_start<<endl;
 
 		if (isExiting) break;
-		_ofile<<"produce started "<<getTime()-_start<<endl;
+		_ofile<<"produce\t"<<getTime()-_start<<"\t";
 		// добавляем новый элемент в очередь
 		int item = num_sequence() % 100000;
 		buffer[queue_end] = item;
 		queue_end = (queue_end + 1) % BUFFER_SIZE;
 		printf ("[+] item (%5d) has been produced by %d,  queue size = %2d (%2d, %2d)\n", item, _id, get_queue_size(), queue_start, queue_end);
-		_ofile<<"produce ended "<<getTime()-_start<<endl;
 
 		pthread_mutex_unlock(&queue_mutex);
 
@@ -223,15 +224,16 @@ void * producer(void *num)
 		// если он ждет появления новых элементов в очереди
 		pthread_cond_broadcast(&queue_not_empty_cond);
 
-		_ofile<<"some work started "<<getTime()-_start<<endl;
+		//_ofile<<"some work started "<<getTime()-_start<<endl;
 		Sleep (my_rand() % PRODUCER_SLEEP_TIME_MS);
-		_ofile<<"some work ended "<<getTime()-_start<<endl;
-		_ofile<<"wait started "<<getTime()-_start<<endl;
+		_ofile<<getTime()-_start<<"\t"<<item<<endl;
+		_ofile<<"wait\t"<<getTime()-_start<<"\t";
 	}
 
 	printf ("Producer %d exiting\n", _id);
 	_ofile<<"===="<<endl;
 	_ofile<<"Producer "<<_id<<" exited at "<<getTime()-_start<<endl;
+	_ofile.close();
 	pthread_exit(0);
 }
 
@@ -252,7 +254,8 @@ void * consumer(void *num)
 	printf ("Consumer %d start\n", _id);
 	_ofile<<"Consumer "<<_id<<" started at "<<_start<<endl;
 	_ofile<<"====="<<endl;
-	_ofile<<"wait started "<<getTime()-_start<<endl;
+	_ofile<<"state\tstart\tend\titem"<<endl;
+	_ofile<<"wait\t"<<getTime()-_start<<"\t";
 
 	bool isExiting=false;
 	// Цикл потребления
@@ -283,19 +286,19 @@ void * consumer(void *num)
 			}
 
 			printf("Consumer %d is waiting (queue is empty)\n", _id);
-			_ofile<<"queue is empty at "<<getTime()-_start<<endl;
+			//_ofile<<"queue is empty at "<<getTime()-_start<<endl;
 			pthread_cond_wait(&queue_not_empty_cond, &queue_mutex);
 		}
 		
-		_ofile<<"wait ended "<<getTime()-_start<<endl;
+		_ofile<<getTime()-_start<<endl;
 
 		if (isExiting) break;
-		_ofile<<"consume started "<<getTime()-_start<<endl;
+		_ofile<<"consume\t"<<getTime()-_start<<"\t";
 		// удаляем обработанный элемент из очереди
 		int item = buffer[queue_start];
 		queue_start = (queue_start + 1) % BUFFER_SIZE;
 		printf ("[-] item (%5d) has been processed by %d, queue size = %2d (%2d, %2d)\n", item, _id, get_queue_size(), queue_start, queue_end);
-		_ofile<<"consume ended "<<getTime()-_start<<endl;
+		//_ofile<<"consume ended "<<getTime()-_start<<endl;
 
 		pthread_mutex_unlock(&queue_mutex);
 
@@ -303,18 +306,20 @@ void * consumer(void *num)
 		// если он ждет освобождения места в очереди
 		pthread_cond_broadcast(&queue_not_full_cond);
 
-		_ofile<<"some work started "<<getTime()-_start<<endl;
+		//_ofile<<"some work started "<<getTime()-_start<<endl;
 		Sleep (my_rand() % CONSUMER_SLEEP_TIME_MS);
-		_ofile<<"some work ended "<<getTime()-_start<<endl;
+		//_ofile<<"some work ended "<<getTime()-_start<<endl;
 		
 		ofile_data(item);
 		
-		_ofile<<"wait started "<<getTime()-_start<<endl;
+		_ofile<<getTime()-_start<<"\t"<<item<<endl;
+		_ofile<<"wait\t"<<getTime()-_start<<"\t";
 	}
 
 	printf ("Consumer %d exiting\n", _id);
 	_ofile<<"===="<<endl;
 	_ofile<<"Consumer "<<_id<<" exited at "<<getTime()-_start<<endl;
+	_ofile.close();
 	pthread_exit(0);
 }
 
@@ -332,6 +337,8 @@ void exitFunc()
 		if (res != 0)
 			printf("pthread_join failed (%d)\n", res);
 	}
+	_ofile<<endl<<"All done!";
+	_ofile.close();
 }
 
 int main(int argc, char *argv[])
