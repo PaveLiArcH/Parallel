@@ -20,10 +20,15 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <time.h>
 #include <fstream>
+#include <signal.h>
+#include <time.h>
+#include <sys/time.h>
+#include <stdlib.h>
+#include <windows.h>
 
-using std::ofstream;
+//using std::ofstream;
+using namespace std;
 
 const int		PRODUCER_COUNT			= 4;	// количество производителей
 const int		CONSUMER_COUNT			= 12;	// количество потребителей
@@ -32,12 +37,14 @@ const int		BUFFER_SIZE				= 8;	// размер циклического буфе
 const int		PRODUCER_SLEEP_TIME_MS	= 250;	// максимальная пауза между циклами производства
 const int		CONSUMER_SLEEP_TIME_MS	= 3000;	// максимальная пауза между циклами потребления
 
+const int		MAX_RUNNING_TIME		= 7000;	// максимальное время выполнения
+
 int				buffer[BUFFER_SIZE];			// циклический буфер для очереди
 unsigned int	queue_start				= 0;	// индекс начала буфера
 unsigned int	queue_end				= 0;	// индекс конца буфера
 
 // флаг для остановки потока-производителя
-bool			stop_production			= false;
+bool		stop_production			= false;
 
 // идентификаторы потоков
 pthread_t		threads[PRODUCER_COUNT+CONSUMER_COUNT];
@@ -71,6 +78,13 @@ void Sleep(unsigned int msTime)
 	int res = nanosleep(&time, NULL);
 }
 #endif
+
+void * timerThread(void *)
+{
+	Sleep(MAX_RUNNING_TIME);
+	printf("Timer elapsed\n");
+	exit(0);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // функция генерации псевдослучайного числа с общей для всех потоков
@@ -166,7 +180,7 @@ void * producer(void *num)
 		int item = num_sequence() % 100000;
 		buffer[queue_end] = item;
 		queue_end = (queue_end + 1) % BUFFER_SIZE;
-		printf ("[+] item (%5d) has been produced,  queue size = %2d (%2d, %2d)\n", item, get_queue_size(), queue_start, queue_end);
+		printf ("[+] item (%5d) has been produced by %d,  queue size = %2d (%2d, %2d)\n", item, _id, get_queue_size(), queue_start, queue_end);
 
 		pthread_mutex_unlock(&queue_mutex);
 
@@ -226,7 +240,7 @@ void * consumer(void *num)
 		// удаляем обработанный элемент из очереди
 		int item = buffer[queue_start];
 		queue_start = (queue_start + 1) % BUFFER_SIZE;
-		printf ("[-] item (%5d) has been processed, queue size = %2d (%2d, %2d)\n", item, get_queue_size(), queue_start, queue_end);
+		printf ("[-] item (%5d) has been processed by %d, queue size = %2d (%2d, %2d)\n", item, _id, get_queue_size(), queue_start, queue_end);
 
 		pthread_mutex_unlock(&queue_mutex);
 
@@ -293,8 +307,20 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	//getchar();
-	Sleep(7000);
+	pthread_t _sleepTimer;
+	int res = pthread_create(
+			&_sleepTimer,			// идентификатор потока
+			NULL,					// аттрибуты потока
+			&timerThread,				// функция потока
+			NULL);					// функция потока без аргумента
+		if (res != 0)
+		{
+			printf("pthread_create failed (%d)\n", res);
+			return 0;
+		}
+
+	atexit(exitFunc);
+	getchar();
 
 	return 0;
 }
